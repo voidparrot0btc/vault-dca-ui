@@ -274,7 +274,7 @@ const WALLETS = {
     icon: "🟣",
     iconBg: "#6B21A8",
     // Xverse injects StacksProvider under XverseProviders
-    getProvider: () => window.XverseProviders?.StacksProvider,
+    getProvider: () => window.StacksProvider ?? window.XverseProviders?.StacksProvider,
     deeplink: "https://www.xverse.app/download",
   },
   leather: {
