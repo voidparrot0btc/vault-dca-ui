@@ -503,3 +503,18 @@ setInterval(fetchPrice, 30_000);
 </script>
 </body>
 </html>
+<script>
+// Wait for Xverse mobile provider to inject, then re-render modal if open
+let pollCount = 0;
+const providerPoll = setInterval(() => {
+  pollCount++;
+  if (window.StacksProvider && typeof window.StacksProvider.request === 'function') {
+    clearInterval(providerPoll);
+    // If modal is open, refresh the wallet list
+    if (document.getElementById('wallet-modal').classList.contains('open')) {
+      openModal();
+    }
+  }
+  if (pollCount > 20) clearInterval(providerPoll); // stop after 10s
+}, 500);
+</script>
