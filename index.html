@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vault DCA — Yield-Optimized Bitcoin DCA on Stacks</title>
-  <script src="https://unpkg.com/@stacks/connect@7.10.1/dist/connect.umd.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0a0a0a; color: #e2e8f0; min-height: 100vh; }
@@ -48,7 +47,9 @@
     .form-group .hint { font-size: 12px; color: #475569; }
     .fee-info { background: #0a0a0a; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 13px; color: #64748b; line-height: 1.6; }
     .fee-info strong { color: #f7931a; }
-    .wallet-warning { background: #1e293b; border: 1px solid #f7931a44; border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 14px; color: #94a3b8; text-align: center; }
+    .info-box { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 24px; font-size: 14px; color: #94a3b8; line-height: 1.8; }
+    .info-box a { color: #f7931a; text-decoration: none; }
+    .info-box strong { color: #f8fafc; }
     .output-box { display: none; background: #0a0a0a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 20px; font-size: 13px; color: #94a3b8; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
     .output-box.success { border-color: #22c55e44; color: #22c55e; }
     .output-box.error { border-color: #ef444444; color: #ef4444; }
@@ -67,6 +68,7 @@
     .agent-stat .l { font-size: 12px; color: #64748b; }
     .footer { border-top: 1px solid #1e293b; padding: 32px 40px; text-align: center; color: #475569; font-size: 13px; }
     .footer a { color: #64748b; text-decoration: none; }
+    .sandbox-link { display: inline-flex; align-items: center; gap: 8px; background: #f7931a; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; margin-top: 16px; }
     @media (max-width: 600px) {
       .hero h1 { font-size: 32px; }
       .form-grid { grid-template-columns: 1fr; }
@@ -113,7 +115,7 @@
   <div class="section-title" style="margin-bottom:8px">How it works</div>
   <div class="section-sub">Four steps from deposit to DCA execution</div>
   <div class="steps">
-    <div class="step"><div class="step-num">1</div><h3>Deposit STX</h3><p>Set your DCA target — the token, price trigger, and amount to swap.</p></div>
+    <div class="step"><div class="step-num">1</div><h3>Deposit STX</h3><p>Set your DCA target — token, price trigger, and amount to swap.</p></div>
     <div class="step"><div class="step-num">2</div><h3>Earn Yield</h3><p>Void Parrot parks your STX in Zest Protocol earning ~12% APY while waiting.</p></div>
     <div class="step"><div class="step-num">3</div><h3>Auto-Execute</h3><p>When BTC hits your target, the agent withdraws from Zest and swaps via Bitflow.</p></div>
     <div class="step"><div class="step-num">4</div><h3>Collect Fees</h3><p>Agent takes 30% of yield + 2% of tokens. You keep the rest plus your DCA.</p></div>
@@ -127,43 +129,51 @@
 
   <section class="vault-form" id="create-vault">
     <div class="section-title">Create a Vault</div>
-    <div class="section-sub">Connect Xverse or Leather wallet (testnet mode)</div>
-    <div id="wallet-warning" class="wallet-warning">
-      ⚠️ Connect your wallet to create a vault.<br/>
-      Use <strong>Xverse</strong> or <strong>Leather</strong> wallet set to <strong>Testnet</strong> mode.<br/>
-      Need testnet STX? <a href="https://explorer.hiro.so/sandbox/faucet?chain=testnet" target="_blank" style="color:#f7931a">Get it here ↗</a>
+    <div class="section-sub">Fill in your parameters, then execute via Hiro Explorer</div>
+
+    <div class="info-box">
+      <strong>How to interact with the contract:</strong><br/>
+      1. Fill in the form below to generate your parameters<br/>
+      2. Click <strong>Open in Hiro Explorer</strong> — it will take you to the sandbox<br/>
+      3. Connect your <strong>Xverse</strong> or <strong>Leather</strong> wallet (set to Testnet)<br/>
+      4. Call <code>create-vault</code> with the pre-filled parameters<br/>
+      Need testnet STX? <a href="https://explorer.hiro.so/sandbox/faucet?chain=testnet" target="_blank">Get it free here ↗</a>
     </div>
+
     <div class="form-grid">
       <div class="form-group">
         <label>STX Amount to Deposit</label>
-        <input type="number" id="stx-amount" placeholder="e.g. 100" min="1" />
+        <input type="number" id="stx-amount" placeholder="e.g. 100" min="1" oninput="updateParams()" />
         <span class="hint">Minimum 1 STX</span>
       </div>
       <div class="form-group">
         <label>Target Token</label>
-        <select id="target-token">
+        <select id="target-token" onchange="updateParams()">
           <option value="sBTC">sBTC (Bitcoin on Stacks)</option>
           <option value="STX">STX</option>
         </select>
       </div>
       <div class="form-group">
         <label>Target BTC Price (USD)</label>
-        <input type="number" id="target-price" placeholder="e.g. 60000" />
+        <input type="number" id="target-price" placeholder="e.g. 60000" oninput="updateParams()" />
         <span class="hint">Buy when BTC drops to this price</span>
       </div>
       <div class="form-group">
         <label>Amount to DCA (STX)</label>
-        <input type="number" id="dca-amount" placeholder="e.g. 80" />
+        <input type="number" id="dca-amount" placeholder="e.g. 80" oninput="updateParams()" />
         <span class="hint">Must be ≤ deposit amount</span>
       </div>
     </div>
+
     <div class="fee-info">
       <strong>Agent fees:</strong> Void Parrot takes <strong>30% of yield earned</strong> while parked + <strong>2% of tokens received</strong> on execution. You keep 70% of yield + 98% of your DCA.
     </div>
+
     <div id="vault-output" class="output-box"></div>
-    <button class="btn-primary" onclick="createVault()" style="width:100%; padding:16px; font-size:16px;">
-      🔒 Create Vault
-    </button>
+
+    <a id="sandbox-link" class="sandbox-link" href="https://explorer.hiro.so/sandbox/contract-call/ST42A8SJY8SXC60AMGXKT06C8FV6JW51XSJ1D3J1/vault-dca?chain=testnet" target="_blank">
+      🔗 Open in Hiro Explorer to Execute
+    </a>
   </section>
 
   <section class="contract-info">
@@ -180,9 +190,9 @@
   <section class="agent-section">
     <div class="agent-info">
       <h3>🦜 Powered by Void Parrot</h3>
-      <p>Void Parrot is an autonomous AIBTC agent running 24/7. It monitors BTC prices every 30 seconds, manages yield positions, and executes DCA trades automatically.</p>
+      <p>Void Parrot is an autonomous AIBTC agent running 24/7 on Vultr VPS. It monitors BTC prices every 30 seconds, manages yield positions, and executes DCA trades automatically.</p>
       <div class="agent-stats">
-        <div class="agent-stat"><div class="v">866+</div><div class="l">Heartbeats</div></div>
+        <div class="agent-stat"><div class="v" id="heartbeat-count">866+</div><div class="l">Heartbeats</div></div>
         <div class="agent-stat"><div class="v">Genesis</div><div class="l">AIBTC Level</div></div>
         <div class="agent-stat"><div class="v">30k sats</div><div class="l">Earned</div></div>
       </div>
@@ -200,107 +210,74 @@
 const CONTRACT_ADDRESS = "ST42A8SJY8SXC60AMGXKT06C8FV6JW51XSJ1D3J1";
 const CONTRACT_NAME = "vault-dca";
 let userAddress = null;
-let userSession = null;
 
-// Wait for Connect library to load
-function getConnect() {
-  return window.StacksConnect || window.stacksConnect;
-}
-
+// Wallet connect using injected providers
 async function connectWallet() {
   if (userAddress) {
     userAddress = null;
-    userSession = null;
-    const btn = document.getElementById("connect-btn");
-    btn.textContent = "Connect Wallet";
-    btn.classList.remove("connected");
-    document.getElementById("wallet-warning").style.display = "block";
+    document.getElementById("connect-btn").textContent = "Connect Wallet";
+    document.getElementById("connect-btn").classList.remove("connected");
     return;
   }
 
-  const connect = getConnect();
-  if (!connect) {
-    showOutput("❌ Stacks Connect library not loaded. Please refresh the page.", "error");
-    return;
+  // Try Leather wallet
+  if (window.LeatherProvider) {
+    try {
+      const response = await window.LeatherProvider.request("getAddresses");
+      const stxAddr = response.result?.addresses?.find(a => a.type === "p2wpkh" || a.symbol === "STX");
+      if (stxAddr) {
+        setConnected(stxAddr.address || stxAddr.stxAddress);
+        return;
+      }
+    } catch(e) {}
   }
 
-  try {
-    const appConfig = new connect.AppConfig(["store_write", "publish_data"]);
-    userSession = new connect.UserSession({ appConfig });
-
-    connect.showConnect({
-      appDetails: {
-        name: "Vault DCA",
-        icon: "https://fav.farm/₿",
-      },
-      userSession,
-      network: "testnet",
-      onFinish: (data) => {
-        const profile = userSession.loadUserData();
-        const addr = profile?.profile?.stxAddress?.testnet;
-        if (addr) {
-          userAddress = addr;
-          const btn = document.getElementById("connect-btn");
-          btn.textContent = addr.slice(0, 8) + "..." + addr.slice(-4);
-          btn.classList.add("connected");
-          document.getElementById("wallet-warning").style.display = "none";
-          showOutput(`✅ Connected: ${addr}\n\nYou can now create a vault.`, "success");
-        }
-      },
-      onCancel: () => {
-        showOutput("❌ Wallet connection cancelled.", "error");
-      },
-    });
-  } catch(e) {
-    showOutput(`❌ Connection error: ${e.message}\n\nMake sure you have Xverse or Leather wallet installed.`, "error");
+  // Try Xverse
+  if (window.XverseProviders?.StacksProvider) {
+    try {
+      const response = await window.XverseProviders.StacksProvider.request("getAddresses", null);
+      const addr = response.result?.addresses?.find(a => a.address?.startsWith("ST"));
+      if (addr) { setConnected(addr.address); return; }
+    } catch(e) {}
   }
+
+  // Try generic Stacks provider
+  if (window.StacksProvider) {
+    try {
+      const response = await window.StacksProvider.request("getAddresses", null);
+      const addr = response?.result?.addresses?.find(a => a.address?.startsWith("ST"));
+      if (addr) { setConnected(addr.address); return; }
+    } catch(e) {}
+  }
+
+  // No wallet found
+  showOutput(`No Stacks wallet detected.\n\nPlease install one of:\n• Leather: https://leather.io\n• Xverse: https://xverse.app\n\nThen set it to Testnet mode and try again.\n\nAlternatively, use the "Open in Hiro Explorer" button below to interact directly.`, "error");
 }
 
-async function createVault() {
-  const stxAmount = parseInt(document.getElementById("stx-amount").value);
-  const targetToken = document.getElementById("target-token").value;
-  const targetPrice = parseInt(document.getElementById("target-price").value);
-  const dcaAmount = parseInt(document.getElementById("dca-amount").value);
+function setConnected(address) {
+  userAddress = address;
+  const btn = document.getElementById("connect-btn");
+  btn.textContent = address.slice(0, 8) + "..." + address.slice(-4);
+  btn.classList.add("connected");
+  showOutput(`✅ Connected: ${address}\n\nYou can now use the Hiro Explorer link to create your vault.`, "success");
+}
 
-  if (!stxAmount || !targetPrice || !dcaAmount) {
-    showOutput("❌ Please fill in all fields", "error"); return;
-  }
+function updateParams() {
+  const stxAmount = parseInt(document.getElementById("stx-amount").value) || 0;
+  const targetToken = document.getElementById("target-token").value;
+  const targetPrice = parseInt(document.getElementById("target-price").value) || 0;
+  const dcaAmount = parseInt(document.getElementById("dca-amount").value) || 0;
+
+  if (!stxAmount || !targetPrice || !dcaAmount) return;
   if (dcaAmount > stxAmount) {
     showOutput("❌ DCA amount cannot exceed deposit amount", "error"); return;
-  }
-  if (!userAddress) {
-    showOutput("❌ Please connect your wallet first", "error"); return;
   }
 
   const microStx = stxAmount * 1000000;
   const microDca = dcaAmount * 1000000;
   const microPrice = targetPrice * 1000000;
 
-  showOutput(`⏳ Opening wallet to sign transaction...\n\nContract: ${CONTRACT_ADDRESS}.${CONTRACT_NAME}\nDeposit: ${stxAmount} STX → will earn ~12% APY\nTarget: Buy when BTC = $${targetPrice.toLocaleString()}\nDCA Amount: ${dcaAmount} STX into ${targetToken}`);
-
-  try {
-    const connect = getConnect();
-    connect.openContractCall({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: CONTRACT_NAME,
-      functionName: "create-vault",
-      functionArgs: [
-        connect.uintCV(microStx),
-        connect.stringAsciiCV(targetToken),
-        connect.uintCV(microPrice),
-        connect.uintCV(microDca),
-      ],
-      network: "testnet",
-      userSession,
-      appDetails: { name: "Vault DCA", icon: "https://fav.farm/₿" },
-      onFinish: (data) => {
-        showOutput(`✅ Vault created!\n\nTX ID: ${data.txId}\nExplorer: https://explorer.hiro.so/txid/${data.txId}?chain=testnet\n\nVoid Parrot will now:\n• Monitor BTC price every 30 seconds\n• Park your ${stxAmount} STX in Zest Protocol\n• Execute DCA when BTC hits $${targetPrice.toLocaleString()}`, "success");
-      },
-      onCancel: () => showOutput("❌ Transaction cancelled.", "error"),
-    });
-  } catch(e) {
-    showOutput(`❌ Transaction failed: ${e.message}`, "error");
-  }
+  showOutput(`Your vault parameters:\n\nstx-amount: ${microStx} (${stxAmount} STX)\ntarget-token: "${targetToken}"\ntarget-price: ${microPrice} ($${targetPrice.toLocaleString()} USD)\ntarget-amount: ${microDca} (${dcaAmount} STX)\n\nClick "Open in Hiro Explorer" and call create-vault with these values.\nVoid Parrot will monitor and execute your DCA automatically.`, "success");
 }
 
 function showOutput(msg, type = "") {
@@ -317,11 +294,22 @@ async function fetchPrice() {
     const price = data.USD;
     document.getElementById("btc-price").textContent = "$" + price.toLocaleString();
     document.getElementById("price-big").textContent = "$" + price.toLocaleString();
-    document.getElementById("price-meta").textContent = "Source: mempool.space · " + new Date().toLocaleTimeString();
+    document.getElementById("price-meta").textContent = "Source: mempool.space · Updated " + new Date().toLocaleTimeString();
+  } catch(e) {}
+}
+
+async function fetchAgentStats() {
+  try {
+    const res = await fetch("https://aibtc.com/api/heartbeat?address=bc1qn2wh460wvh4mkdfg9eyj7m4h3mr43cpaqvaasd");
+    const data = await res.json();
+    if (data.checkInCount) {
+      document.getElementById("heartbeat-count").textContent = data.checkInCount + "+";
+    }
   } catch(e) {}
 }
 
 fetchPrice();
+fetchAgentStats();
 setInterval(fetchPrice, 30000);
 </script>
 </body>
